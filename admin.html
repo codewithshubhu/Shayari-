@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Shayari Admin</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:'Poppins',sans-serif;
+background:linear-gradient(135deg,#1c1f2b,#23263a);
+display:flex;
+justify-content:center;
+align-items:center;
+min-height:100vh;
+color:#fff;
+}
+
+.container{
+width:95%;
+max-width:850px;
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(20px);
+padding:35px;
+border-radius:20px;
+box-shadow:0 0 40px rgba(0,0,0,0.6);
+}
+
+h2{
+text-align:center;
+margin-bottom:20px;
+font-family:'Noto Serif Devanagari',serif;
+}
+
+textarea,input,select{
+width:100%;
+padding:12px;
+margin:6px 0 16px;
+border:none;
+border-radius:10px;
+background:rgba(255,255,255,0.08);
+color:#fff;
+font-size:14px;
+outline:none;
+}
+
+textarea{
+height:140px;
+resize:vertical;
+font-family:'Noto Serif Devanagari',serif;
+}
+
+button{
+padding:12px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:500;
+transition:0.3s;
+margin-top:10px;
+}
+
+.generateBtn{
+width:100%;
+background:linear-gradient(45deg,#2196f3,#00c6ff);
+color:#fff;
+}
+
+.copyBtn{
+width:100%;
+background:linear-gradient(45deg,#00b09b,#96c93d);
+color:#fff;
+}
+
+button:hover{
+transform:translateY(-2px);
+}
+
+.preview,.output{
+margin-top:20px;
+padding:18px;
+border-radius:15px;
+background:rgba(0,0,0,0.6);
+white-space:pre-wrap;
+}
+
+.preview{
+font-family:'Noto Serif Devanagari',serif;
+text-align:center;
+line-height:1.6;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>✨ Smart Shayari Panel</h2>
+
+<label>Paste Shayari</label>
+<textarea id="text"></textarea>
+
+<label>ID</label>
+<input type="number" id="id">
+
+<label>Title</label>
+<input type="text" id="title">
+
+<label>Slug</label>
+<input type="text" id="slug">
+
+<label>Music Src</label>
+<input type="text" id="music">
+
+<label>Category</label>
+<select id="category">
+<option value="love">Love</option>
+<option value="sad">Sad</option>
+<option value="deep">Deep</option>
+<option value="motivation">Motivation</option>
+<option value="special">Special</option>
+</select>
+
+<button class="generateBtn" onclick="generateJSON()">Generate JSON</button>
+<button class="copyBtn" onclick="copyJSON()">Copy JSON</button>
+
+<div class="preview" id="livePreview"></div>
+<div class="output" id="output"></div>
+
+</div>
+
+<script>
+
+/* Clean slug */
+function makeSlug(text){
+return text.toLowerCase()
+.replace(/[^a-z0-9\s]/gi,'')
+.trim()
+.replace(/\s+/g,'-');
+}
+
+/* Clean filename */
+function makeFileName(text){
+return text.toLowerCase()
+.replace(/[^a-z0-9\s]/gi,'')
+.replace(/\s+/g,'');
+}
+
+/* Auto detect when shayari pasted */
+document.getElementById("text").addEventListener("input", function(){
+
+const lines = this.value.trim().split("\n");
+const firstLine = lines[0] || "";
+
+if(firstLine){
+
+const slug = makeSlug(firstLine);
+const fileName = makeFileName(firstLine);
+
+document.getElementById("title").value = firstLine;
+document.getElementById("slug").value = slug;
+document.getElementById("music").value =
+"music/" + fileName + ".mp3";
+
+}
+
+document.getElementById("id").value = Date.now();
+
+document.getElementById("livePreview").innerHTML =
+this.value.replace(/\n/g,"<br>");
+
+});
+
+/* Generate JSON */
+function generateJSON(){
+
+const textRaw = document.getElementById("text").value;
+
+if(!textRaw){
+alert("Paste Shayari first!");
+return;
+}
+
+const title = document.getElementById("title").value || textRaw.split("\n")[0];
+
+const slug = makeSlug(title);
+const music = "music/" + makeFileName(title) + ".mp3";
+
+const category = document.getElementById("category").value;
+const id = document.getElementById("id").value || Date.now();
+
+const preview = textRaw.split("\n")[0];
+const text = textRaw.replace(/\n/g,"\\n");
+
+const today = new Date().toISOString().split('T')[0];
+
+const json = `{
+"id": ${id},
+"slug": "${slug}",
+"category": "${category}",
+"title": "${title}",
+"preview": "${preview}",
+"text": "${text}",
+"music": "${music}",
+"date": "${today}"
+},`;
+
+document.getElementById("output").textContent = json;
+
+}
+
+/* Copy JSON */
+function copyJSON(){
+const text = document.getElementById("output").textContent;
+if(!text){
+alert("Generate JSON first!");
+return;
+}
+navigator.clipboard.writeText(text);
+alert("Copied successfully!");
+}
+
+</script>
+
+</body>
+</html>

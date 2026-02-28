@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shayari Collection</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;600&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+
+/* ===== GLOBAL ===== */
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:'Poppins',sans-serif;
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+color:white;
+overflow-x:hidden;
+}
+
+canvas{
+position:fixed;
+top:0;
+left:0;
+z-index:-1;
+}
+
+header{
+text-align:center;
+padding:40px 20px;
+}
+
+.section{
+padding:30px 5%;
+}
+
+.section h2{
+margin-bottom:20px;
+border-left:4px solid #00c6ff;
+padding-left:10px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+gap:20px;
+}
+
+.card{
+background:rgba(255,255,255,0.08);
+backdrop-filter:blur(15px);
+padding:20px;
+border-radius:18px;
+cursor:pointer;
+transition:0.3s;
+border:1px solid rgba(255,255,255,0.1);
+}
+
+.card:hover{
+transform:translateY(-6px);
+background:rgba(255,255,255,0.15);
+}
+
+.card h3{
+font-family:'Noto Serif Devanagari',serif;
+margin-bottom:10px;
+}
+
+.card p{
+font-size:14px;
+opacity:0.8;
+}
+
+.shayari-container{
+width:90%;
+max-width:700px;
+margin:40px auto;
+background:rgba(255,255,255,0.08);
+backdrop-filter:blur(20px);
+padding:40px;
+border-radius:25px;
+text-align:center;
+border:1px solid rgba(255,255,255,0.15);
+box-shadow:0 0 40px rgba(0,0,0,0.5);
+}
+
+.shayari-text{
+font-family:'Noto Serif Devanagari',serif;
+font-size:22px;
+line-height:1.8;
+margin-bottom:30px;
+min-height:120px;
+}
+
+.controls{
+display:flex;
+gap:15px;
+}
+
+button{
+flex:1;
+padding:12px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+font-weight:600;
+}
+
+.prev{
+background:linear-gradient(45deg,#ff512f,#dd2476);
+color:white;
+}
+
+.next{
+background:linear-gradient(45deg,#2196f3,#00c6ff);
+color:white;
+}
+
+.backBtn{
+margin-top:20px;
+background:rgba(255,255,255,0.15);
+color:white;
+width:100%;
+padding:12px;
+border:none;
+border-radius:12px;
+}
+
+footer{
+text-align:center;
+padding:30px;
+opacity:0.6;
+}
+
+.loader{
+text-align:center;
+padding:50px;
+font-size:18px;
+opacity:0.8;
+}
+
+</style>
+</head>
+
+<body>
+
+<canvas></canvas>
+
+<header>
+<h3>My Shayari Collection</h3>
+<p>Shubham Mishra</p>
+</header>
+
+<div id="homePage">
+<div id="content">
+<div class="loader">Loading Shayari...</div>
+</div>
+</div>
+
+<div id="detailPage" style="display:none;">
+<div class="shayari-container">
+<div class="shayari-text"></div>
+
+<div class="controls">
+<button class="prev" onclick="prevShayari()">Previous</button>
+<button class="next" onclick="nextShayari()">Next</button>
+</div>
+
+<button class="backBtn" onclick="goHome()">⬅ Back</button>
+</div>
+</div>
+
+<audio id="audioPlayer"></audio>
+
+<footer>
+Made with Prishi AI 🐓
+</footer>
+
+<script>
+
+/* ===== PARTICLE BACKGROUND ===== */
+
+const canvas=document.querySelector("canvas");
+const ctx=canvas.getContext("2d");
+
+function resize(){
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+}
+resize();
+window.addEventListener("resize",resize);
+
+let particles=[];
+for(let i=0;i<80;i++){
+particles.push({
+x:Math.random()*innerWidth,
+y:Math.random()*innerHeight,
+r:Math.random()*2,
+dx:(Math.random()-0.5),
+dy:(Math.random()-0.5)
+});
+}
+
+function animate(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.fillStyle="rgba(255,255,255,0.4)";
+
+particles.forEach(p=>{
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+ctx.fill();
+
+p.x+=p.dx;
+p.y+=p.dy;
+
+if(p.x<0||p.x>canvas.width) p.dx*=-1;
+if(p.y<0||p.y>canvas.height) p.dy*=-1;
+});
+
+requestAnimationFrame(animate);
+}
+animate();
+
+/* ===== SHAYARI SYSTEM ===== */
+
+let shayariData=[];
+let currentIndex=0;
+let userInteracted=false;
+let lineTimer=null;
+let siteSettings={};
+
+const audioPlayer=document.getElementById("audioPlayer");
+
+document.addEventListener("click",()=>{
+userInteracted=true;
+},{once:true});
+
+/* FETCH JSON */
+
+fetch("shayari.json")
+.then(res=>res.json())
+.then(data=>{
+siteSettings=data.siteSettings;
+shayariData=data.shayaris;
+loadHome();
+})
+.catch(()=>{
+document.getElementById("content").innerHTML="<div class='loader'>Failed to load shayari.json</div>";
+});
+
+/* HOME */
+
+function loadHome(){
+
+const content=document.getElementById("content");
+content.innerHTML="";
+const categories={};
+
+shayariData.forEach(sh=>{
+if(!categories[sh.category]){
+categories[sh.category]=[];
+}
+categories[sh.category].push(sh);
+});
+
+for(const cat in categories){
+
+const section=document.createElement("div");
+section.className="section";
+
+const title=document.createElement("h2");
+title.textContent=cat.toUpperCase()+" SHAYARI";
+
+const grid=document.createElement("div");
+grid.className="grid";
+
+categories[cat].forEach(sh=>{
+const card=document.createElement("div");
+card.className="card";
+
+card.innerHTML=`
+<h3>${sh.title}</h3>
+<p>${sh.preview || ""}</p>
+`;
+
+card.onclick=()=>{
+showDetail(shayariData.indexOf(sh),true);
+};
+
+grid.appendChild(card);
+});
+
+section.appendChild(title);
+section.appendChild(grid);
+content.appendChild(section);
+}
+
+}
+
+/* DETAIL */
+
+function showDetail(index,playMusicFirst=false){
+
+currentIndex=index;
+
+document.getElementById("homePage").style.display="none";
+document.getElementById("detailPage").style.display="block";
+
+loadShayari(playMusicFirst);
+}
+
+function goHome(){
+document.getElementById("homePage").style.display="block";
+document.getElementById("detailPage").style.display="none";
+stopAudio();
+stopLineTimer();
+}
+
+function loadShayari(playFirst=false){
+
+const container=document.querySelector(".shayari-text");
+const sh=shayariData[currentIndex];
+
+if(!sh) return;
+
+container.innerHTML="";
+stopAudio();
+stopLineTimer();
+
+if(sh.lines){
+
+let i=0;
+
+function showLine(){
+
+if(i>=sh.lines.length) return;
+
+container.innerHTML=sh.lines[i].text;
+
+let delay=siteSettings.defaultFadeDuration;
+
+if(i < sh.lines.length-1){
+delay=(sh.lines[i+1].time - sh.lines[i].time)*1000;
+}
+
+i++;
+lineTimer=setTimeout(showLine,delay);
+}
+
+showLine();
+}
+else if(sh.text){
+container.innerHTML=sh.text.replace(/\n/g,"<br>");
+}
+
+if(sh.music){
+
+audioPlayer.src=sh.music;
+audioPlayer.loop=false;
+audioPlayer.volume=siteSettings.defaultVolume || 0.6;
+audioPlayer.load();
+
+if(userInteracted || playFirst){
+audioPlayer.play().catch(()=>{});
+}
+
+}
+
+}
+
+function nextShayari(){
+currentIndex=(currentIndex+1)%shayariData.length;
+loadShayari(true);
+}
+
+function prevShayari(){
+currentIndex=(currentIndex-1+shayariData.length)%shayariData.length;
+loadShayari(true);
+}
+
+function stopLineTimer(){
+if(lineTimer){
+clearTimeout(lineTimer);
+lineTimer=null;
+}
+}
+
+function stopAudio(){
+audioPlayer.pause();
+audioPlayer.currentTime=0;
+audioPlayer.removeAttribute("src");
+audioPlayer.load();
+}
+
+</script>
+
+</body>
+</html>
